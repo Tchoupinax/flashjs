@@ -12,6 +12,7 @@ export class FlashMessage {
     private message: string;
     private type: string;
     private options: any;
+    private cb: any;
 
     /*
      * Constantes
@@ -64,7 +65,8 @@ export class FlashMessage {
     constructor(
         message,
         type = FlashMessage._CONSTANTS.TYPES.ERROR,
-        options = {}
+        options = {},
+        cb
     ) {
         if (type.constructor === Object) {
             options = type;
@@ -92,26 +94,29 @@ export class FlashMessage {
 
         this._createContainer();
         this._createMessage();
+
+        // Save callback
+        this.cb = cb;
     }
 
     /*
      * Creation methods
      * @return new FlashMessage
      */
-    static create(message, type = FlashMessage._CONSTANTS.TYPES.ERROR, options = {}) {
-        return new this(message, type, options);
+    static create(message, type = FlashMessage._CONSTANTS.TYPES.ERROR, options = {}, cb = null) {
+        return new this(message, type, options, cb);
     }
-    static success(message, options = {}) {
-        return new this(message, FlashMessage._CONSTANTS.TYPES.SUCCESS, options);
+    static success(message, options = {}, cb = null) {
+        return new this(message, FlashMessage._CONSTANTS.TYPES.SUCCESS, options, cb);
     }
-    static warning(message, options = {}) {
-        return new this(message, FlashMessage._CONSTANTS.TYPES.WARNING, options);
+    static warning(message, options = {}, cb = null) {
+        return new this(message, FlashMessage._CONSTANTS.TYPES.WARNING, options, cb);
     }
-    static error(message, options = {}) {
-        return new this(message, FlashMessage._CONSTANTS.TYPES.ERROR, options);
+    static error(message, options = {}, cb = null) {
+        return new this(message, FlashMessage._CONSTANTS.TYPES.ERROR, options, cb);
     }
-    static info(message, options = {}) {
-        return new this(message, FlashMessage._CONSTANTS.TYPES.INFO, options);
+    static info(message, options = {}, cb = null) {
+        return new this(message, FlashMessage._CONSTANTS.TYPES.INFO, options, cb);
     }
 
     static addCustomVerbs(...verbs) {
@@ -120,7 +125,7 @@ export class FlashMessage {
         }
         verbs.forEach(verb => {
             if (!FlashMessage[verb]) {
-                FlashMessage[verb] = (message, options = {}) => new FlashMessage(message, verb, options);
+                FlashMessage[verb] = (message, options = {}) => new FlashMessage(message, verb, options, null);
             }
         });
     }
@@ -128,13 +133,6 @@ export class FlashMessage {
     /**
      * Callables methodes
      */
-    create(): void {
-        console.log('FLASH CREEE');
-        const div = document.createElement('div');
-        div.className += 'flash';
-        document.body.appendChild(div);
-    }
-
     setOptions(options = {}) {
         this.options = Object.assign({}, FlashMessage.DEFAULT_OPTIONS, options);
         return this;
@@ -142,6 +140,9 @@ export class FlashMessage {
 
     destroy() {
         this._close();
+        if (this.cb !== null) {
+            this.cb();
+        }
     }
 
     /**
@@ -217,7 +218,12 @@ export class FlashMessage {
 
     private _run() {
         this._startProgress();
-        this._c_timeout = window.setTimeout(() => this._close(), this.options.timeout);
+        this._c_timeout = window.setTimeout(() => {
+            this._close();
+            if (this.cb !== null) {
+                this.cb();
+            }
+        }, this.options.timeout);
     }
 
     private _stop() {
@@ -251,7 +257,6 @@ export class FlashMessage {
         this._bindEvent('mouseover', _ => this._stop());
         this._bindEvent('mouseleave', _ => this._run());
         this._bindEvent('click', _ => this._close());
-
     }
 
     private _bindEvent(event_name, callback) {
@@ -325,7 +330,6 @@ export class FlashMessage {
         }
     }
 
-
     private _stopProgress() {
         if (!this._hasProgress() || !this.$_progress) {
             return;
@@ -343,3 +347,4 @@ export class FlashMessage {
         }
     }
 }
+
